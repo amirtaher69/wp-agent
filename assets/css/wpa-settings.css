@@ -1,0 +1,18 @@
+/* Settings screen — connection test result states. */
+
+.wpa-test-result {
+    margin-inline-start: 8px;
+    font-weight: 600;
+}
+
+.wpa-test-result.is-loading {
+    color: #646970;
+}
+
+.wpa-test-result.is-success {
+    color: #00a32a;
+}
+
+.wpa-test-result.is-error {
+    color: #d63638;
+}
