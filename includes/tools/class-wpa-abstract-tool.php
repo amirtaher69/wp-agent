@@ -45,11 +45,31 @@ abstract class WPA_Abstract_Tool {
     abstract public function execute( array $args );
 
     /**
-     * Destructive tools will require explicit user confirmation (phase 4).
-     * Every phase 3 tool is read-only.
+     * Destructive (write) tools require explicit user confirmation in the UI
+     * before they run. Read-only tools return false.
      */
     public function is_destructive() {
         return false;
+    }
+
+    /**
+     * Human-readable Persian lines describing the arguments, shown in the
+     * confirmation card. Tools override this for friendlier output.
+     */
+    public function summarize( array $args ) {
+        $lines = [];
+
+        foreach ( $args as $key => $value ) {
+            $value = is_scalar( $value ) ? (string) $value : wp_json_encode( $value, JSON_UNESCAPED_UNICODE );
+
+            if ( mb_strlen( $value ) > 120 ) {
+                $value = mb_substr( $value, 0, 120 ) . '…';
+            }
+
+            $lines[] = $key . ': ' . $value;
+        }
+
+        return $lines;
     }
 
     /**

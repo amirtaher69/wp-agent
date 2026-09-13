@@ -1,9 +1,11 @@
 /**
- * Chat screen — conversation state and REST calls (vanilla JS).
- * Config (chatUrl, nonce, maxMessages, i18n) is injected via wp_localize_script as `wpaChat`.
+ * Chat screen — conversation state, REST calls and the confirmation flow
+ * for destructive actions (vanilla JS).
+ * Config (chatUrl, confirmUrl, nonce, maxMessages, i18n) is injected via
+ * wp_localize_script as `wpaChat`.
  *
- * The conversation lives in page memory only; persistence arrives in a later phase.
- * Model output is always rendered with textContent — never innerHTML.
+ * The conversation lives in page memory only; persistence arrives in a later
+ * phase. Model output is always rendered with textContent — never innerHTML.
  */
 ( function () {
     'use strict';
@@ -40,6 +42,21 @@
         list.appendChild( empty );
     }
 
+    function append_bubble( role, text, is_error ) {
+        var row = document.createElement( 'div' );
+        row.className = 'wpa-msg wpa-msg-' + role + ( is_error ? ' is-error' : '' );
+
+        var content = document.createElement( 'div' );
+        content.className = 'wpa-msg-content';
+        content.textContent = text;
+
+        row.appendChild( content );
+        list.appendChild( row );
+        scroll_to_bottom();
+
+        return row;
+    }
+
     // Chips strip showing which tools the agent executed for an answer.
     function append_steps( steps ) {
         var row = document.createElement( 'div' );
@@ -65,19 +82,78 @@
         scroll_to_bottom();
     }
 
-    function append_bubble( role, text, is_error ) {
+    // Confirmation card for pending destructive actions.
+    function append_confirmation( json ) {
         var row = document.createElement( 'div' );
-        row.className = 'wpa-msg wpa-msg-' + role + ( is_error ? ' is-error' : '' );
+        row.className = 'wpa-msg wpa-msg-confirm';
 
-        var content = document.createElement( 'div' );
-        content.className = 'wpa-msg-content';
-        content.textContent = text;
+        var card = document.createElement( 'div' );
+        card.className = 'wpa-confirm-card';
 
-        row.appendChild( content );
+        var title = document.createElement( 'div' );
+        title.className = 'wpa-confirm-title';
+        title.textContent = wpaChat.i18n.confirmTitle;
+        card.appendChild( title );
+
+        ( json.actions || [] ).forEach( function ( action ) {
+            var box = document.createElement( 'div' );
+            box.className = 'wpa-confirm-action';
+
+            var name = document.createElement( 'div' );
+            name.className = 'wpa-confirm-action-title';
+            name.textContent = action.title || action.tool;
+            box.appendChild( name );
+
+            ( action.summary || [] ).forEach( function ( line ) {
+                var item = document.createElement( 'div' );
+                item.className = 'wpa-confirm-line';
+                item.textContent = line;
+                box.appendChild( item );
+            } );
+
+            card.appendChild( box );
+        } );
+
+        var buttons = document.createElement( 'div' );
+        buttons.className = 'wpa-confirm-buttons';
+
+        var approveBtn = document.createElement( 'button' );
+        approveBtn.type = 'button';
+        approveBtn.className = 'button button-primary';
+        approveBtn.textContent = wpaChat.i18n.approve;
+
+        var rejectBtn = document.createElement( 'button' );
+        rejectBtn.type = 'button';
+        rejectBtn.className = 'button';
+        rejectBtn.textContent = wpaChat.i18n.reject;
+
+        var status = document.createElement( 'span' );
+        status.className = 'wpa-confirm-status';
+
+        function decide( approve ) {
+            approveBtn.disabled = true;
+            rejectBtn.disabled = true;
+            card.classList.add( approve ? 'is-approved' : 'is-rejected' );
+            status.textContent = approve ? wpaChat.i18n.approved : wpaChat.i18n.rejected;
+
+            run_request( wpaChat.confirmUrl, { token: json.token, approve: approve } );
+        }
+
+        approveBtn.addEventListener( 'click', function () {
+            decide( true );
+        } );
+
+        rejectBtn.addEventListener( 'click', function () {
+            decide( false );
+        } );
+
+        buttons.appendChild( approveBtn );
+        buttons.appendChild( rejectBtn );
+        buttons.appendChild( status );
+        card.appendChild( buttons );
+        row.appendChild( card );
         list.appendChild( row );
         scroll_to_bottom();
-
-        return row;
     }
 
     function set_pending( state ) {
@@ -87,53 +163,71 @@
         resetBtn.disabled = state;
     }
 
-    function send_message( text ) {
-        messages.push( { role: 'user', content: text } );
-        remove_empty_state();
-        append_bubble( 'user', text );
-
-        set_pending( true );
-        var thinking = append_bubble( 'assistant', wpaChat.i18n.thinking, false );
-        thinking.classList.add( 'is-thinking' );
-
-        fetch( wpaChat.chatUrl, {
+    function post_json( url, payload ) {
+        return fetch( url, {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json',
                 'X-WP-Nonce': wpaChat.nonce
             },
-            body: JSON.stringify( {
-                messages: messages.slice( -wpaChat.maxMessages )
-            } )
-        } )
-            .then( function ( response ) {
-                return response.json().then( function ( json ) {
-                    return { ok: response.ok, json: json };
-                } );
-            } )
+            body: JSON.stringify( payload )
+        } ).then( function ( response ) {
+            return response.json().then( function ( json ) {
+                return { ok: response.ok, json: json };
+            } );
+        } );
+    }
+
+    /**
+     * Render a chat/confirm response. Returns true while the turn is still
+     * waiting on a user decision (confirmation card open).
+     */
+    function handle_response( res ) {
+        if ( res.ok && res.json && res.json.confirmation_required ) {
+            if ( Array.isArray( res.json.steps ) && res.json.steps.length ) {
+                append_steps( res.json.steps );
+            }
+            append_confirmation( res.json );
+            return true;
+        }
+
+        if ( res.ok && res.json && 'string' === typeof res.json.reply ) {
+            if ( Array.isArray( res.json.steps ) && res.json.steps.length ) {
+                append_steps( res.json.steps );
+            }
+            messages.push( { role: 'assistant', content: res.json.reply } );
+            append_bubble( 'assistant', res.json.reply );
+            return false;
+        }
+
+        // Errors are shown in the thread but never enter the history.
+        var message = ( res.json && res.json.message ) ? res.json.message : wpaChat.i18n.genericError;
+        append_bubble( 'assistant', message, true );
+        return false;
+    }
+
+    function run_request( url, payload ) {
+        set_pending( true );
+
+        var thinking = append_bubble( 'assistant', wpaChat.i18n.thinking, false );
+        thinking.classList.add( 'is-thinking' );
+
+        post_json( url, payload )
             .then( function ( res ) {
                 thinking.remove();
 
-                if ( res.ok && res.json && 'string' === typeof res.json.reply ) {
-                    if ( Array.isArray( res.json.steps ) && res.json.steps.length ) {
-                        append_steps( res.json.steps );
-                    }
-                    messages.push( { role: 'assistant', content: res.json.reply } );
-                    append_bubble( 'assistant', res.json.reply );
-                } else {
-                    // Errors are shown in the thread but never enter the history.
-                    var message = ( res.json && res.json.message ) ? res.json.message : wpaChat.i18n.genericError;
-                    append_bubble( 'assistant', message, true );
+                var waiting = handle_response( res );
+
+                if ( ! waiting ) {
+                    set_pending( false );
+                    input.focus();
                 }
             } )
             .catch( function () {
                 thinking.remove();
                 append_bubble( 'assistant', wpaChat.i18n.networkError, true );
-            } )
-            .finally( function () {
                 set_pending( false );
-                input.focus();
             } );
     }
 
@@ -147,7 +241,11 @@
         }
 
         input.value = '';
-        send_message( text );
+        messages.push( { role: 'user', content: text } );
+        remove_empty_state();
+        append_bubble( 'user', text );
+
+        run_request( wpaChat.chatUrl, { messages: messages.slice( -wpaChat.maxMessages ) } );
     } );
 
     // Enter sends the message; Shift+Enter inserts a newline.

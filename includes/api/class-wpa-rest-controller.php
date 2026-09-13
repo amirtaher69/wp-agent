@@ -43,6 +43,27 @@ class WPA_REST_Controller {
 
         register_rest_route(
             self::REST_NAMESPACE,
+            '/confirm',
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'handle_confirm' ],
+                'permission_callback' => [ $this, 'check_permission' ],
+                'args'                => [
+                    'token'   => [
+                        'required'          => true,
+                        'type'              => 'string',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'approve' => [
+                        'required' => true,
+                        'type'     => 'boolean',
+                    ],
+                ],
+            ]
+        );
+
+        register_rest_route(
+            self::REST_NAMESPACE,
             '/test-connection',
             [
                 'methods'             => WP_REST_Server::CREATABLE,
@@ -115,10 +136,41 @@ class WPA_REST_Controller {
         require_once WPA_PATH . 'includes/ai/class-wpa-agent-runner.php';
 
         $runner = new WPA_Agent_Runner();
-        $result = $runner->run( $messages );
 
+        return $this->respond_with_result( $runner->run( $messages ) );
+    }
+
+    /**
+     * POST /confirm — approve or reject pending destructive actions and
+     * resume the paused agent loop.
+     */
+    public function handle_confirm( WP_REST_Request $request ) {
+        require_once WPA_PATH . 'includes/ai/class-wpa-agent-runner.php';
+
+        $runner = new WPA_Agent_Runner();
+        $result = $runner->resume( $request->get_param( 'token' ), (bool) $request->get_param( 'approve' ) );
+
+        return $this->respond_with_result( $result );
+    }
+
+    /**
+     * Shape a runner result: final answer, or a confirmation request that
+     * the chat UI turns into an approval card.
+     */
+    private function respond_with_result( $result ) {
         if ( is_wp_error( $result ) ) {
             return $this->to_rest_error( $result );
+        }
+
+        if ( 'pending' === $result['status'] ) {
+            return rest_ensure_response(
+                [
+                    'confirmation_required' => true,
+                    'token'                 => $result['token'],
+                    'actions'               => $result['actions'],
+                    'steps'                 => $result['steps'],
+                ]
+            );
         }
 
         return rest_ensure_response(
@@ -161,9 +213,13 @@ class WPA_REST_Controller {
     private function build_system_prompt() {
         return sprintf(
             'You are the built-in AI assistant of the WordPress site "%s" (%s). ' .
-            'You have tools that read live data from this site (site info, posts, comments, taxonomy terms). ' .
+            'You have tools that read live data from this site (site info, posts, comments, taxonomy terms) and ' .
+            'tools that change the site (create/update/trash posts, manage terms, moderate comments, upload media). ' .
             'When the user asks anything about the site content or configuration, call the appropriate tool ' .
             'instead of guessing — never invent site data. ' .
+            'Write operations only execute after the user explicitly approves them in the UI; this pause is normal. ' .
+            'When creating content, default to draft status unless the user explicitly asked to publish. ' .
+            'If the user declines an operation, acknowledge it and do not retry. ' .
             'Always answer in Persian (Farsi) unless the user explicitly asks for another language. ' .
             'Be concise, accurate and helpful. Today is %s.',
             get_bloginfo( 'name' ),
@@ -173,12 +229,20 @@ class WPA_REST_Controller {
     }
 
     /**
-     * Convert an AI client WP_Error into one carrying a proper HTTP status.
+     * Convert an internal WP_Error into one carrying a proper HTTP status.
      */
     private function to_rest_error( WP_Error $error ) {
-        $status = ( 'wpa_missing_api_key' === $error->get_error_code() ) ? 400 : 502;
+        $map = [
+            'wpa_missing_api_key'    => 400,
+            'wpa_max_steps_exceeded' => 400,
+            'wpa_invalid_token'      => 400,
+            'wpa_token_forbidden'    => 403,
+        ];
 
-        return new WP_Error( $error->get_error_code(), $error->get_error_message(), [ 'status' => $status ] );
+        $code   = $error->get_error_code();
+        $status = isset( $map[ $code ] ) ? $map[ $code ] : 502;
+
+        return new WP_Error( $code, $error->get_error_message(), [ 'status' => $status ] );
     }
 
     /**

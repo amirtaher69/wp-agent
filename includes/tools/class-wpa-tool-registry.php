@@ -44,6 +44,14 @@ class WPA_Tool_Registry {
             'class-wpa-list-comments-tool.php' => 'WPA_List_Comments_Tool',
             'class-wpa-list-terms-tool.php'    => 'WPA_List_Terms_Tool',
             'class-wpa-get-term-tool.php'      => 'WPA_Get_Term_Tool',
+            'class-wpa-create-post-tool.php'      => 'WPA_Create_Post_Tool',
+            'class-wpa-update-post-tool.php'      => 'WPA_Update_Post_Tool',
+            'class-wpa-trash-post-tool.php'       => 'WPA_Trash_Post_Tool',
+            'class-wpa-set-post-terms-tool.php'   => 'WPA_Set_Post_Terms_Tool',
+            'class-wpa-create-term-tool.php'      => 'WPA_Create_Term_Tool',
+            'class-wpa-update-term-tool.php'      => 'WPA_Update_Term_Tool',
+            'class-wpa-moderate-comment-tool.php' => 'WPA_Moderate_Comment_Tool',
+            'class-wpa-upload-media-tool.php'     => 'WPA_Upload_Media_Tool',
         ];
 
         $tools = [];

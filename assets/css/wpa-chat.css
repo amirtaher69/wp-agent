@@ -106,6 +106,73 @@
     background: #fcf0f1;
 }
 
+/* Confirmation card for destructive actions. */
+.wpa-confirm-card {
+    width: 100%;
+    max-width: 80%;
+    margin-inline-start: auto;
+    background: #fcf9e8;
+    border: 1px solid #dba617;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.wpa-confirm-title {
+    font-weight: 600;
+    color: #996800;
+    margin-bottom: 10px;
+}
+
+.wpa-confirm-action {
+    background: #fff;
+    border: 1px solid #f0e6c8;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.wpa-confirm-action-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.wpa-confirm-line {
+    font-size: 12px;
+    color: #50575e;
+    line-height: 1.9;
+}
+
+.wpa-confirm-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.wpa-confirm-status {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.wpa-confirm-card.is-approved {
+    border-color: #00a32a;
+    background: #f0f8f0;
+}
+
+.wpa-confirm-card.is-approved .wpa-confirm-status {
+    color: #00a32a;
+}
+
+.wpa-confirm-card.is-rejected {
+    border-color: #8c8f94;
+    background: #f6f7f7;
+    opacity: 0.85;
+}
+
+.wpa-confirm-card.is-rejected .wpa-confirm-status {
+    color: #646970;
+}
+
 .wpa-chat-form {
     border-top: 1px solid #dcdcde;
     padding: 12px 16px;

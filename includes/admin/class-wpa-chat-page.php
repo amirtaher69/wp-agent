@@ -108,10 +108,16 @@ class WPA_Chat_Page {
             'wpaChat',
             [
                 'chatUrl'     => esc_url_raw( rest_url( 'wpa/v1/chat' ) ),
+                'confirmUrl'  => esc_url_raw( rest_url( 'wpa/v1/confirm' ) ),
                 'nonce'       => wp_create_nonce( 'wp_rest' ),
                 'maxMessages' => 20,
                 'i18n'        => [
                     'toolsUsed'    => '🔧 ابزارهای استفاده‌شده:',
+                    'confirmTitle' => '⚠️ این عملیات نیاز به تایید شما دارد',
+                    'approve'      => 'تایید و اجرا',
+                    'reject'       => 'انصراف',
+                    'approved'     => 'اجرا شد ✓',
+                    'rejected'     => 'لغو شد ✗',
                     'thinking'     => 'در حال فکر کردن…',
                     'networkError' => 'خطا در ارتباط با سایت. اتصال خود را بررسی کنید.',
                     'genericError' => 'خطای نامشخصی رخ داد.',
