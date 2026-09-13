@@ -112,7 +112,10 @@ class WPA_REST_Controller {
             ]
         );
 
-        $result = $this->get_client()->send( $messages );
+        require_once WPA_PATH . 'includes/ai/class-wpa-agent-runner.php';
+
+        $runner = new WPA_Agent_Runner();
+        $result = $runner->run( $messages );
 
         if ( is_wp_error( $result ) ) {
             return $this->to_rest_error( $result );
@@ -120,9 +123,10 @@ class WPA_REST_Controller {
 
         return rest_ensure_response(
             [
-                'reply' => $result['content'],
+                'reply' => $result['reply'],
                 'model' => $result['model'],
                 'usage' => $result['usage'],
+                'steps' => $result['steps'],
             ]
         );
     }
@@ -157,6 +161,9 @@ class WPA_REST_Controller {
     private function build_system_prompt() {
         return sprintf(
             'You are the built-in AI assistant of the WordPress site "%s" (%s). ' .
+            'You have tools that read live data from this site (site info, posts, comments, taxonomy terms). ' .
+            'When the user asks anything about the site content or configuration, call the appropriate tool ' .
+            'instead of guessing — never invent site data. ' .
             'Always answer in Persian (Farsi) unless the user explicitly asks for another language. ' .
             'Be concise, accurate and helpful. Today is %s.',
             get_bloginfo( 'name' ),

@@ -71,6 +71,41 @@
     color: #d63638;
 }
 
+/* Executed-tools strip shown above the assistant answer. */
+.wpa-msg-tools {
+    margin-bottom: 4px;
+}
+
+.wpa-tools-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    max-width: 80%;
+    margin-inline-start: auto;
+}
+
+.wpa-tools-label {
+    font-size: 11px;
+    color: #646970;
+}
+
+.wpa-tool-chip {
+    font-size: 11px;
+    line-height: 1;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #2271b1;
+    color: #2271b1;
+    background: #f0f6fc;
+}
+
+.wpa-tool-chip.is-failed {
+    border-color: #d63638;
+    color: #d63638;
+    background: #fcf0f1;
+}
+
 .wpa-chat-form {
     border-top: 1px solid #dcdcde;
     padding: 12px 16px;

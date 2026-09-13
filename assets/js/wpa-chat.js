@@ -40,6 +40,31 @@
         list.appendChild( empty );
     }
 
+    // Chips strip showing which tools the agent executed for an answer.
+    function append_steps( steps ) {
+        var row = document.createElement( 'div' );
+        row.className = 'wpa-msg wpa-msg-tools';
+
+        var wrap = document.createElement( 'div' );
+        wrap.className = 'wpa-tools-list';
+
+        var label = document.createElement( 'span' );
+        label.className = 'wpa-tools-label';
+        label.textContent = wpaChat.i18n.toolsUsed;
+        wrap.appendChild( label );
+
+        steps.forEach( function ( step ) {
+            var chip = document.createElement( 'span' );
+            chip.className = 'wpa-tool-chip' + ( step.ok ? '' : ' is-failed' );
+            chip.textContent = step.title || step.tool;
+            wrap.appendChild( chip );
+        } );
+
+        row.appendChild( wrap );
+        list.appendChild( row );
+        scroll_to_bottom();
+    }
+
     function append_bubble( role, text, is_error ) {
         var row = document.createElement( 'div' );
         row.className = 'wpa-msg wpa-msg-' + role + ( is_error ? ' is-error' : '' );
@@ -91,6 +116,9 @@
                 thinking.remove();
 
                 if ( res.ok && res.json && 'string' === typeof res.json.reply ) {
+                    if ( Array.isArray( res.json.steps ) && res.json.steps.length ) {
+                        append_steps( res.json.steps );
+                    }
                     messages.push( { role: 'assistant', content: res.json.reply } );
                     append_bubble( 'assistant', res.json.reply );
                 } else {

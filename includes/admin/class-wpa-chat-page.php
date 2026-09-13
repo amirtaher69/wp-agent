@@ -111,6 +111,7 @@ class WPA_Chat_Page {
                 'nonce'       => wp_create_nonce( 'wp_rest' ),
                 'maxMessages' => 20,
                 'i18n'        => [
+                    'toolsUsed'    => '🔧 ابزارهای استفاده‌شده:',
                     'thinking'     => 'در حال فکر کردن…',
                     'networkError' => 'خطا در ارتباط با سایت. اتصال خود را بررسی کنید.',
                     'genericError' => 'خطای نامشخصی رخ داد.',
