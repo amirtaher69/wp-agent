@@ -1,6 +1,6 @@
 <?php
 /**
- * Settings Page — admin menu, settings fields and the connection test handler.
+ * Settings Page — settings submenu, fields and sanitization.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -11,7 +11,8 @@ class WPA_Settings_Page {
 
     const OPTION_NAME    = 'wpa_settings';
     const OPTION_GROUP   = 'wpa_settings_group';
-    const MENU_SLUG      = 'wp-agent';
+    const MENU_SLUG      = 'wp-agent-settings';
+    const PARENT_SLUG    = 'wp-agent';
     const API_SECTION_ID = 'wpa_api_section';
 
     /**
@@ -69,22 +70,11 @@ class WPA_Settings_Page {
     }
 
     /**
-     * Register the top-level menu and the settings submenu.
+     * Register the settings screen under the chat page's top-level menu.
      */
     public function register_menu() {
-        $this->hook_suffix = add_menu_page(
-            'WP Agent',
-            'WP Agent',
-            'manage_options',
-            self::MENU_SLUG,
-            [ $this, 'render_page' ],
-            'dashicons-format-chat',
-            66
-        );
-
-        // Rename the auto-created first submenu item to a Persian label.
-        add_submenu_page(
-            self::MENU_SLUG,
+        $this->hook_suffix = add_submenu_page(
+            self::PARENT_SLUG,
             'تنظیمات WP Agent',
             'تنظیمات',
             'manage_options',
@@ -299,46 +289,13 @@ class WPA_Settings_Page {
             'wpa-settings',
             'wpaSettings',
             [
-                'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-                'nonce'   => wp_create_nonce( 'wpa_test_connection' ),
+                'restUrl' => esc_url_raw( rest_url( 'wpa/v1/test-connection' ) ),
+                'nonce'   => wp_create_nonce( 'wp_rest' ),
                 'i18n'    => [
                     'testing'      => 'در حال بررسی اتصال…',
                     'networkError' => 'خطا در ارتباط با سایت. اتصال خود را بررسی کنید.',
                     'genericError' => 'خطای نامشخصی رخ داد.',
                 ],
-            ]
-        );
-    }
-
-    /**
-     * AJAX handler: send a tiny ping message through the AI client.
-     */
-    public function handle_test_connection() {
-        check_ajax_referer( 'wpa_test_connection', 'nonce' );
-
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error( [ 'message' => 'شما دسترسی لازم برای این کار را ندارید.' ], 403 );
-        }
-
-        require_once WPA_PATH . 'includes/ai/class-wpa-ai-client.php';
-
-        $client = new WPA_AI_Client();
-        $result = $client->send(
-            [
-                [
-                    'role'    => 'user',
-                    'content' => 'Reply with the single word: OK',
-                ],
-            ]
-        );
-
-        if ( is_wp_error( $result ) ) {
-            wp_send_json_error( [ 'message' => $result->get_error_message() ] );
-        }
-
-        wp_send_json_success(
-            [
-                'message' => sprintf( 'اتصال با موفقیت برقرار شد — مدل: %s', $result['model'] ),
             ]
         );
     }

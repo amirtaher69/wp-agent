@@ -1,0 +1,90 @@
+/* Chat screen — layout, message bubbles and states. */
+
+.wpa-chat-wrap .wpa-chat-model {
+    font-size: 12px;
+    font-weight: 400;
+    color: #646970;
+    margin-inline-start: 8px;
+}
+
+.wpa-chat {
+    display: flex;
+    flex-direction: column;
+    max-width: 860px;
+    height: calc(100vh - 220px);
+    min-height: 420px;
+    margin-top: 12px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.wpa-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.wpa-chat-empty {
+    color: #646970;
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.wpa-msg {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.wpa-msg-content {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.7;
+}
+
+/* User bubbles stick to the inline-start side (right in RTL). */
+.wpa-msg-user .wpa-msg-content {
+    margin-inline-end: auto;
+    background: #2271b1;
+    color: #fff;
+}
+
+/* Assistant bubbles stick to the inline-end side (left in RTL). */
+.wpa-msg-assistant .wpa-msg-content {
+    margin-inline-start: auto;
+    background: #f0f0f1;
+    color: #1d2327;
+}
+
+.wpa-msg-assistant.is-thinking .wpa-msg-content {
+    color: #646970;
+    font-style: italic;
+}
+
+.wpa-msg-assistant.is-error .wpa-msg-content {
+    background: #fcf0f1;
+    border: 1px solid #d63638;
+    color: #d63638;
+}
+
+.wpa-chat-form {
+    border-top: 1px solid #dcdcde;
+    padding: 12px 16px;
+    background: #f6f7f7;
+}
+
+.wpa-chat-form textarea {
+    width: 100%;
+    resize: vertical;
+    border-radius: 6px;
+}
+
+.wpa-chat-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
